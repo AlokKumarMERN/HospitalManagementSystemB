@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 import { verifyGoogleToken } from '../services/googleAuthService.js';
+import { sendPasswordResetEmail } from '../utils/emailService.js';
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -158,12 +159,23 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  // In production, send email with reset link
-  // For now, just return the token
-  res.json({
-    message: 'Password reset token generated',
-    resetToken, // In production, send this via email instead
-  });
+  try {
+    // Send password reset email
+    await sendPasswordResetEmail(user.email, resetToken);
+
+    res.json({
+      success: true,
+      message: 'Password reset email sent successfully. Please check your email.',
+    });
+  } catch (error) {
+    // If email fails, clear the reset token
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(500);
+    throw new Error('Email could not be sent. Please try again later.');
+  }
 });
 
 // @desc    Reset password
