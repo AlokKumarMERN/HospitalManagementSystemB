@@ -52,6 +52,15 @@ const testResultSchema = new mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+testResultSchema.index({ patient: 1 }); // Index on patient
+testResultSchema.index({ doctor: 1 }); // Index on doctor
+testResultSchema.index({ appointment: 1 }); // Index on appointment
+testResultSchema.index({ status: 1 }); // Index on status
+testResultSchema.index({ patient: 1, status: 1 }); // Compound index for patient's tests by status
+testResultSchema.index({ patient: 1, createdAt: -1 }); // Compound index for patient's tests sorted by date
+testResultSchema.index({ doctor: 1, status: 1 }); // Compound index for doctor's tests by status
+
 const TestResult = mongoose.model('TestResult', testResultSchema);
 
 export default TestResult;

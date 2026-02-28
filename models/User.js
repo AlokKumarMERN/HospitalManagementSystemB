@@ -78,6 +78,14 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+// Note: email already has unique index from schema definition
+userSchema.index({ role: 1 }); // Index on role for filtering
+userSchema.index({ department: 1 }); // Index on department for doctor queries
+userSchema.index({ googleId: 1 }); // Index on googleId for OAuth
+userSchema.index({ isActive: 1 }); // Index on isActive status
+userSchema.index({ role: 1, isActive: 1 }); // Compound index for common queries
+
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {

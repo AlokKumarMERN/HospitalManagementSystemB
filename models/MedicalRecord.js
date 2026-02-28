@@ -35,6 +35,13 @@ const medicalRecordSchema = new mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+medicalRecordSchema.index({ patient: 1 }); // Index on patient
+medicalRecordSchema.index({ doctor: 1 }); // Index on doctor
+medicalRecordSchema.index({ appointment: 1 }); // Index on appointment
+medicalRecordSchema.index({ patient: 1, createdAt: -1 }); // Compound index for patient's records sorted by date
+medicalRecordSchema.index({ doctor: 1, createdAt: -1 }); // Compound index for doctor's records sorted by date
+
 const MedicalRecord = mongoose.model('MedicalRecord', medicalRecordSchema);
 
 export default MedicalRecord;

@@ -43,6 +43,14 @@ export const createAppointment = asyncHandler(async (req, res) => {
 // @route   GET /api/appointments
 // @access  Private
 export const getAppointments = asyncHandler(async (req, res) => {
+  // Pagination parameters
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100; // Default to 100 for better UX
+  const skip = (page - 1) * limit;
+
+  // Filter parameters
+  const status = req.query.status;
+
   let query = {};
 
   if (req.user.role === 'patient') {
@@ -51,13 +59,33 @@ export const getAppointments = asyncHandler(async (req, res) => {
     query.doctor = req.user._id;
   }
 
+  // Add status filter if provided
+  if (status) {
+    query.status = status;
+  }
+
+  // Get total count for pagination
+  const total = await Appointment.countDocuments(query);
+
+  // Fetch paginated appointments
   const appointments = await Appointment.find(query)
     .populate('patient', 'name email phone')
     .populate('doctor', 'name specialization')
     .populate('department', 'name')
-    .sort({ appointmentDate: -1 });
+    .sort({ appointmentDate: -1 })
+    .limit(limit)
+    .skip(skip)
+    .lean(); // Use lean() for better performance
 
-  res.json(appointments);
+  res.json({
+    appointments,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  });
 });
 
 // @desc    Get single appointment
@@ -159,11 +187,50 @@ export const checkSlotAvailability = asyncHandler(async (req, res) => {
 // @route   GET /api/appointments/all
 // @access  Private/Admin
 export const getAllAppointments = asyncHandler(async (req, res) => {
-  const appointments = await Appointment.find({})
+  // Pagination parameters
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  // Filter parameters
+  const status = req.query.status;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+
+  let query = {};
+
+  // Add status filter if provided
+  if (status) {
+    query.status = status;
+  }
+
+  // Add date range filter if provided
+  if (startDate || endDate) {
+    query.appointmentDate = {};
+    if (startDate) query.appointmentDate.$gte = new Date(startDate);
+    if (endDate) query.appointmentDate.$lte = new Date(endDate);
+  }
+
+  // Get total count for pagination
+  const total = await Appointment.countDocuments(query);
+
+  // Fetch paginated appointments
+  const appointments = await Appointment.find(query)
     .populate('patient', 'name email phone')
     .populate('doctor', 'name specialization')
     .populate('department', 'name')
-    .sort({ appointmentDate: -1 });
+    .sort({ appointmentDate: -1 })
+    .limit(limit)
+    .skip(skip)
+    .lean(); // Use lean() for better performance
 
-  res.json(appointments);
+  res.json({
+    appointments,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  });
 });
