@@ -73,21 +73,36 @@ const authLimiter = rateLimit({
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://savelifes.vercel.app',
   'https://hospital-management-system-f.vercel.app',
   'https://hospital-management-system-b.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
+// Add support for dynamic Vercel preview URLs
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, Postman, or curl requests)
     if (!origin) return callback(null, true);
     
+    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
-    } else {
+    } 
+    // In production, also allow any Vercel deployment URL
+    else if (origin.includes('.vercel.app')) {
+      callback(null, true);
+    }
+    // In development, allow localhost with any port
+    else if (isDevelopment && origin.includes('localhost')) {
+      callback(null, true);
+    }
+    else {
       console.log('Blocked by CORS:', origin);
+      console.log('Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },

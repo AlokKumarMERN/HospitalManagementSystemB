@@ -11,6 +11,8 @@ import { sendPasswordResetEmail } from '../utils/emailService.js';
 export const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
+  console.log('Registration attempt for:', email);
+
   // Validate input
   if (!name || !email || !password) {
     res.status(400);
@@ -21,6 +23,7 @@ export const register = asyncHandler(async (req, res) => {
   const userExists = await User.findOne({ email });
 
   if (userExists) {
+    console.log('User already exists:', email);
     res.status(400);
     throw new Error('User already exists');
   }
@@ -33,6 +36,7 @@ export const register = asyncHandler(async (req, res) => {
   });
 
   if (user) {
+    console.log('User created successfully:', user._id);
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -52,6 +56,8 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  console.log('Login attempt for:', email);
+
   // Validate input
   if (!email || !password) {
     res.status(400);
@@ -62,12 +68,14 @@ export const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
+    console.log('User not found:', email);
     res.status(401);
     throw new Error('Invalid credentials');
   }
 
   // Check if password exists (for Google users)
   if (!user.password) {
+    console.log('Google user tried email login:', email);
     res.status(401);
     throw new Error('Please login with Google');
   }
@@ -76,6 +84,7 @@ export const login = asyncHandler(async (req, res) => {
   const isMatch = await user.matchPassword(password);
 
   if (user && isMatch) {
+    console.log('Login successful:', user._id);
     res.json({
       _id: user._id,
       name: user.name,
@@ -84,6 +93,7 @@ export const login = asyncHandler(async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
+    console.log('Invalid password for:', email);
     res.status(401);
     throw new Error('Invalid credentials');
   }
@@ -95,41 +105,52 @@ export const login = asyncHandler(async (req, res) => {
 export const googleLogin = asyncHandler(async (req, res) => {
   const { email, name } = req.body;
 
+  console.log('Google login attempt:', { email, name });
+
   if (!email || !name) {
     res.status(400);
     throw new Error('Please provide user information');
   }
 
-  // For development, we skip Google token verification
-  // In production, use verifyGoogleToken(token) to verify
-  const googleId = email; // Using email as unique identifier
+  try {
+    // For development, we skip Google token verification
+    // In production, use verifyGoogleToken(token) to verify
+    const googleId = email; // Using email as unique identifier
 
-  // Check if user exists
-  let user = await User.findOne({ email });
+    // Check if user exists
+    let user = await User.findOne({ email });
 
-  if (user) {
-    // Update googleId if not set
-    if (!user.googleId) {
-      user.googleId = googleId;
-      await user.save();
+    if (user) {
+      console.log('Existing user found:', user.email);
+      // Update googleId if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      console.log('Creating new Google user:', email);
+      // Create new user
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        password: undefined, // No password for Google users
+      });
+      console.log('New user created:', user._id);
     }
-  } else {
-    // Create new user
-    user = await User.create({
-      name,
-      email,
-      googleId,
-      password: undefined, // No password for Google users
-    });
-  }
 
-  res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    token: generateToken(user._id),
-  });
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500);
+    throw new Error('Google authentication failed: ' + error.message);
+  }
 });
 
 // @desc    Forgot password
