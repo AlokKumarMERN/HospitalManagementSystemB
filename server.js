@@ -24,10 +24,13 @@ const __dirname = dirname(__filename);
 // Load environment variables
 dotenv.config();
 
-// Connect to database
-connectDB();
-
+// Initialize app
 const app = express();
+
+// Connect to database (only for non-serverless or on first request)
+if (!process.env.VERCEL) {
+  connectDB();
+}
 
 // Security middleware - Helmet
 app.use(helmet({
@@ -101,6 +104,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Middleware to ensure DB connection for serverless
+app.use(async (req, res, next) => {
+  if (process.env.VERCEL) {
+    try {
+      await connectDB();
+    } catch (error) {
+      console.error('Database connection error:', error);
+      return res.status(503).json({ 
+        message: 'Database connection failed', 
+        error: process.env.NODE_ENV === 'production' ? 'Service temporarily unavailable' : error.message 
+      });
+    }
+  }
+  next();
+});
 
 // Routes
 app.get('/', (req, res) => {
