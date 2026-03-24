@@ -7,10 +7,17 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '../uploads/test-results');
+// Use /tmp on Vercel (writable). Local/dev keeps using project uploads folder.
+const isVercel = Boolean(process.env.VERCEL);
+const uploadBaseDir = isVercel ? '/tmp' : path.join(__dirname, '../uploads');
+const uploadDir = path.join(uploadBaseDir, 'test-results');
+
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (error) {
+    console.error('Failed to initialize upload directory:', error.message);
+  }
 }
 
 // Configure storage
