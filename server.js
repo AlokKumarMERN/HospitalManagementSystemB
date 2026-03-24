@@ -120,8 +120,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Middleware to ensure DB connection for serverless
-app.use(async (req, res, next) => {
+// Middleware to ensure DB connection for serverless API requests
+const ensureDbConnection = async (req, res, next) => {
   if (process.env.VERCEL) {
     try {
       await connectDB();
@@ -134,12 +134,14 @@ app.use(async (req, res, next) => {
     }
   }
   next();
-});
+};
 
 // Routes
 app.get('/', (req, res) => {
   res.json({ message: 'SaveLife API is running...', status: 'healthy' });
 });
+
+app.use('/api', ensureDbConnection);
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);

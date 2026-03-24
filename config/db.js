@@ -10,8 +10,13 @@ const connectDB = async () => {
   }
 
   try {
+    const mongoUri = process.env.MONGO_URI || process.env.MONGO_URL;
+    if (!mongoUri) {
+      throw new Error('MongoDB connection string is missing. Set MONGO_URI in environment variables.');
+    }
+
     // Optimize MongoDB connection for serverless
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+    const conn = await mongoose.connect(mongoUri, {
       maxPoolSize: 10,
       minPoolSize: 2,
       serverSelectionTimeoutMS: 5000,
