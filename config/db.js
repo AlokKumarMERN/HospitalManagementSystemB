@@ -49,8 +49,8 @@ const connectDB = async () => {
   } catch (error) {
     console.error(`Error: ${error.message}`);
     isConnected = false;
-    // Don't exit process in serverless environment
-    if (!process.env.VERCEL) {
+    // Exit only during local/dev runs so production/serverless does not hard-crash.
+    if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
       process.exit(1);
     } else {
       throw error;

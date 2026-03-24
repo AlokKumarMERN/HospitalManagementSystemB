@@ -27,8 +27,9 @@ dotenv.config();
 // Initialize app
 const app = express();
 
-// Connect to database (only for non-serverless or on first request)
-if (!process.env.VERCEL) {
+// Eager DB connection is only for local/dev runtime.
+// Production/serverless uses lazy connection in API middleware.
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
   connectDB();
 }
 
